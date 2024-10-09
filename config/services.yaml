@@ -22,3 +22,12 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    App\Feature\WordPressImport\WpClient:
+        arguments:
+            $baseUri: '%env(WORDPRESS_BASE_URI)%'
+            $auth: ['%env(WORDPRESS_USERNAME)%', '%env(WORDPRESS_PASSWORD)%']
+
+    App\Feature\WordPressImport\WordPressUploader:
+        arguments:
+            $hugoImageDirectory: '%env(HUGO_IMAGE_DIRECTORY)%'
