@@ -20,12 +20,18 @@ final readonly class WordPressUploader
     }
 
     /**
+     * @return array{id: int}
+     *
      * @throws GuzzleException
      * @throws \JsonException
      */
-    public function uploadImage(string $path): int
+    public function uploadImage(string $path): array
     {
         $filePath = $this->hugoImageDirectory.$path;
+        if (!file_exists($filePath)) {
+            return [];
+        }
+
         $filename = basename($filePath);
         $fileType = mime_content_type($filePath);
         $body = file_get_contents($filePath);
@@ -40,7 +46,7 @@ final readonly class WordPressUploader
 
         $json = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
 
-        return $json['id'];
+        return $json;
     }
 
     public function createAndGetTermIds(Taxonomy $taxonomy, array $terms): array
@@ -73,6 +79,23 @@ final readonly class WordPressUploader
 
             return $json[0]['id'];
         }, $terms);
+    }
+
+    public function uploadPostImage(string $content): string
+    {
+        if (preg_match_all('/<img.*?src=["\'](.*?)["\'].*?>/i', $content, $matches)) {
+            foreach ($matches[1] as $key => $imagePath) {
+                $uploadedImage = $this->uploadImage($imagePath);
+                if (isset($uploadedImage['source_url'])) {
+                    $content = str_replace($imagePath, $uploadedImage['source_url'], $content);
+                } elseif (isset($matches[0][$key])) {
+                    // 存在しない場合は画像を消す
+                    $content = str_replace($matches[0][$key], '', $content);
+                }
+            }
+        }
+
+        return $content;
     }
 
     /**

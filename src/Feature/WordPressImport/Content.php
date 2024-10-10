@@ -11,7 +11,7 @@ final readonly class Content
         public \DateTimeImmutable $date,
         public array $categories,
         public array $tags,
-        public string $image,
+        public ?string $image,
         public string $content,
     ) {
     }
@@ -25,9 +25,9 @@ final readonly class Content
         return new self(
             $meta['title'],
             $time,
-            $meta['categories'],
-            $meta['tags'],
-            $meta['image'],
+            $meta['categories'] ?? [],
+            $meta['tags'] ?? [],
+            $meta['image'] ?? null,
             $content,
         );
     }
@@ -39,10 +39,12 @@ final readonly class Content
     public function upload(WordPressUploader $uploader): void
     {
         // アイキャッチ画像のアップロード
-        $image = null !== $this->image ? $uploader->uploadImage($this->image) : null;
+        $image = null !== $this->image ? $uploader->uploadImage($this->image)['id'] : null;
         $categories = $uploader->createAndGetTermIds(Taxonomy::CATEGORY, $this->categories);
         $tags = $uploader->createAndGetTermIds(Taxonomy::TAG, $this->tags);
 
-        $uploader->createPost($this->title, $this->content, $image, $categories, $tags);
+        $parsedContent = (new \Parsedown())->parse($this->content);
+        $parsedContent = $uploader->uploadPostImage($parsedContent);
+        $uploader->createPost($this->title, $parsedContent, $image, $categories, $tags);
     }
 }
